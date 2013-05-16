@@ -7,6 +7,8 @@ import android.widget.ImageView;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import android.widget.TextView;
 import org.jetbrains.annotations.TestOnly;
 
 import static com.squareup.picasso.Request.LoadedFrom.MEMORY;
@@ -321,7 +323,32 @@ public class RequestBuilder {
     picasso.submit(request);
   }
 
-  private void makeTargetRequest(Target target, boolean strong) {
+    public void into(TextView target) {
+        if (target == null) {
+            throw new IllegalArgumentException("Target must not be null.");
+        }
+
+        // Look for the target bitmap in the memory cache without moving to a background thread.
+        String requestKey = createKey(path, resourceId, options, transformations);
+        Bitmap bitmap = picasso.quickMemoryCacheCheck(target, requestKey);
+        if (bitmap != null) {
+            PicassoDrawable.setBitmap(target, picasso.context, bitmap, MEMORY, noFade, picasso.debugging);
+            return;
+        }
+
+        if (placeholderResId != 0 || placeholderDrawable != null) {
+            PicassoDrawable.setPlaceholder(target, picasso.context, placeholderResId, placeholderDrawable,
+                    picasso.debugging);
+        }
+
+        Request request =
+                new Request(picasso, path, resourceId, target, options, transformations, type, skipCache,
+                        noFade, errorResId, errorDrawable);
+        picasso.submit(request);
+    }
+
+
+    private void makeTargetRequest(Target target, boolean strong) {
     if (target == null) {
       throw new IllegalArgumentException("Target must not be null.");
     }
@@ -332,6 +359,12 @@ public class RequestBuilder {
       target.onSuccess(bitmap);
       return;
     }
+
+      if (placeholderResId != 0 || placeholderDrawable != null) {
+          target.onPlaceHolder(placeholderResId);
+         // PicassoDrawable.setPlaceholder(target, picasso.context, placeholderResId, placeholderDrawable,
+         //         picasso.debugging);
+      }
 
     Request request =
         new TargetRequest(picasso, path, resourceId, target, strong, options, transformations, type,

@@ -12,6 +12,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import static android.graphics.Color.WHITE;
 import static com.squareup.picasso.Request.LoadedFrom;
@@ -36,6 +37,18 @@ final class PicassoDrawable extends Drawable {
       target.setImageDrawable(new PicassoDrawable(context, bitmap, loadedFrom, noFade, debugging));
     }
   }
+    static void setBitmap(TextView target, Context context, Bitmap bitmap, LoadedFrom loadedFrom,
+                          boolean noFade, boolean debugging) {
+        PicassoDrawable picassoDrawable = extractPicassoDrawable(target);
+        if (picassoDrawable != null) {
+            picassoDrawable.setBitmap(bitmap, loadedFrom, noFade);
+        } else {
+            PicassoDrawable draw= new PicassoDrawable(context, bitmap, loadedFrom, noFade, debugging);
+            draw.setBounds(0, 0, 80, 80);
+            target.setCompoundDrawables(null,draw,null,null);
+          //  target.setImageDrawable();
+        }
+    }
 
   /**
    * Create or update the drawable on the target {@link ImageView} to display the supplied
@@ -52,6 +65,17 @@ final class PicassoDrawable extends Drawable {
     }
   }
 
+    static void setPlaceholder(TextView target, Context context, int placeholderResId,
+                               Drawable placeholderDrawable, boolean debugging) {
+        PicassoDrawable picassoDrawable = extractPicassoDrawable(target);
+        if (picassoDrawable != null) {
+            picassoDrawable.setPlaceholder(placeholderResId, placeholderDrawable);
+        } else {
+            PicassoDrawable draw=  new PicassoDrawable(context, placeholderResId, placeholderDrawable, debugging);
+                    draw.setBounds(0, 0, 80, 80);
+            target.setCompoundDrawables(null, draw,null,null);
+        }
+    }
   /**
    * Check for an existing instance of picasso drawable to save allocations if we need to set a
    * placeholder or were able to find the bitmap in the memory cache.
@@ -63,6 +87,13 @@ final class PicassoDrawable extends Drawable {
     }
     return null;
   }
+    private static PicassoDrawable extractPicassoDrawable(TextView target) {
+        Drawable targetDrawable = target.getCompoundDrawables()[1];
+        if (targetDrawable instanceof PicassoDrawable) {
+            return (PicassoDrawable) targetDrawable;
+        }
+        return null;
+    }
 
   private final Context context;
   private final boolean debugging;

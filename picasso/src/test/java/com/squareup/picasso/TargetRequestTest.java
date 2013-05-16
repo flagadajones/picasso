@@ -20,6 +20,12 @@ public class TargetRequestTest {
       @Override public void onError() {
         throw new AssertionError();
       }
+
+        @Override
+        public void onPlaceHolder(int resource) {
+
+        }
+
     };
     TargetRequest tr =
         new TargetRequest(null, null, 0, recycler, false, null, null, null, false);

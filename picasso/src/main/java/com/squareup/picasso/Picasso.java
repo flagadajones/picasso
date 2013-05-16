@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.view.View;
 import android.widget.ImageView;
 import java.io.File;
 import java.io.IOException;
@@ -305,6 +306,7 @@ public class Picasso {
         try {
           response = loader.load(request.path, request.retryCount == 0);
           if (response == null) {
+
             return null;
           }
           result = decodeStream(response.stream, options);
@@ -330,7 +332,7 @@ public class Picasso {
 
     // If the caller wants deferred resize, try to load the target ImageView's measured size.
     if (options != null && options.deferredResize) {
-      ImageView target = request.target.get();
+      View target = request.target.get();
       if (target != null) {
         int targetWidth = target.getMeasuredWidth();
         int targetHeight = target.getMeasuredHeight();
@@ -526,7 +528,7 @@ public class Picasso {
         memoryCache = new LruCache(context);
       }
       if (service == null) {
-        service = Executors.newFixedThreadPool(3, new Utils.PicassoThreadFactory());
+        service = Executors.newFixedThreadPool(5, new Utils.PicassoThreadFactory());
       }
 
       Stats stats = new Stats(memoryCache);

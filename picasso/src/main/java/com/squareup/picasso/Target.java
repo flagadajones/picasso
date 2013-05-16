@@ -21,4 +21,6 @@ public interface Target {
 
   /** Callback indicating the image could not be successfully loaded. */
   void onError();
+
+    void onPlaceHolder(int resource);
 }

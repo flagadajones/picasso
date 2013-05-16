@@ -4,7 +4,10 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
+import android.view.View;
 import android.widget.ImageView;
+import android.widget.TextView;
+
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -36,7 +39,7 @@ class Request implements Runnable {
   final Picasso picasso;
   final String path;
   final int resourceId;
-  final WeakReference<ImageView> target;
+  final WeakReference<View> target;
   final PicassoBitmapOptions options;
   final List<Transformation> transformations;
   final Type type;
@@ -52,13 +55,13 @@ class Request implements Runnable {
   int retryCount;
   boolean retryCancelled;
 
-  Request(Picasso picasso, String path, int resourceId, ImageView imageView,
+  Request(Picasso picasso, String path, int resourceId, View imageView,
       PicassoBitmapOptions options, List<Transformation> transformations, Type type,
       boolean skipCache, boolean noFade, int errorResId, Drawable errorDrawable) {
     this.picasso = picasso;
     this.path = path;
     this.resourceId = resourceId;
-    this.target = new WeakReference<ImageView>(imageView);
+    this.target = new WeakReference<View>(imageView);
     this.options = options;
     this.transformations = transformations;
     this.type = type;
@@ -80,23 +83,33 @@ class Request implements Runnable {
           String.format("Attempted to complete request with no result!\n%s", this));
     }
 
-    ImageView target = this.target.get();
+    View target = this.target.get();
     if (target != null) {
       Context context = picasso.context;
       boolean debugging = picasso.debugging;
-      PicassoDrawable.setBitmap(target, context, result, loadedFrom, noFade, debugging);
+        if(target instanceof ImageView)
+        PicassoDrawable.setBitmap((ImageView)target, context, result, loadedFrom, noFade, debugging);
+        else if (target instanceof TextView)
+            PicassoDrawable.setBitmap((TextView)target, context, result, loadedFrom, noFade, debugging);
+
     }
   }
 
   void error() {
-    ImageView target = this.target.get();
+    View target = this.target.get();
     if (target == null) {
       return;
     }
     if (errorResId != 0) {
-      target.setImageResource(errorResId);
+        if(target instanceof ImageView)
+            ( (ImageView)target).setImageResource(errorResId);
+        else if     (target instanceof TextView)
+            ( (TextView)target).setCompoundDrawables(null,picasso.context.getResources().getDrawable(errorResId),null,null);
     } else if (errorDrawable != null) {
-      target.setImageDrawable(errorDrawable);
+        if(target instanceof ImageView)
+            ( (ImageView)target).setImageDrawable(errorDrawable);
+        else if     (target instanceof TextView)
+            ( (TextView)target).setCompoundDrawables(null,errorDrawable,null,null);
     }
   }
 
