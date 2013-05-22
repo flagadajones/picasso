@@ -47,6 +47,17 @@ public class Picasso {
    */
   private static final Object DECODE_LOCK = new Object();
 
+  /** Callbacks for Picasso events. */
+  public interface Listener {
+    /**
+     * Invoked when an image has failed to load after all retry attempts. This is useful for
+     * reporting image failures to a remote analytics service, for example.
+     * <p>
+     * <em>Note:</em> This will only be called for file, content provider, or URL paths.
+     */
+    void onImageLoadFailed(Picasso picasso, String path);
+  }
+
   // TODO This should be static.
   final Handler handler = new Handler(Looper.getMainLooper()) {
     @Override public void handleMessage(Message msg) {
@@ -67,8 +78,7 @@ public class Picasso {
           break;
 
         case REQUEST_DECODE_FAILED:
-          picasso.targetsToRequests.remove(request.getTarget());
-          request.error();
+          picasso.error(request);
           break;
 
         default:
@@ -83,16 +93,19 @@ public class Picasso {
   final Loader loader;
   final ExecutorService service;
   final Cache cache;
-  final Map<Object, Request> targetsToRequests;
+  final Listener listener;
   final Stats stats;
+  final Map<Object, Request> targetsToRequests;
 
   boolean debugging;
 
-  Picasso(Context context, Loader loader, ExecutorService service, Cache cache, Stats stats) {
+  Picasso(Context context, Loader loader, ExecutorService service, Cache cache, Listener listener,
+      Stats stats) {
     this.context = context;
     this.loader = loader;
     this.service = service;
     this.cache = cache;
+    this.listener = listener;
     this.stats = stats;
     this.targetsToRequests = new WeakHashMap<Object, Request>();
   }
@@ -108,8 +121,13 @@ public class Picasso {
   }
 
   /**
-   * Start an image request using the specified path. This path may be a remote URL, file resource,
-   * or content provider resource.
+   * Start an image request using the specified path.
+   * <p>
+   * This path may be a file resource (prefixed with {@code file:}), a content resource
+   * (prefixed with {@code content:}), or a remote URL.
+   *
+   * @see #load(java.io.File)
+   * @see #load(int)
    */
   public RequestBuilder load(String path) {
     if (path == null || path.trim().length() == 0) {
@@ -121,10 +139,15 @@ public class Picasso {
     if (path.startsWith(CONTENT_SCHEME)) {
       return new RequestBuilder(this, path, Type.CONTENT);
     }
-    return new RequestBuilder(this, path, Type.STREAM);
+    return new RequestBuilder(this, path, Type.NETWORK);
   }
 
-  /** Start an image request using the specified image file. */
+  /**
+   * Start an image request using the specified image file.
+   *
+   * @see #load(String)
+   * @see #load(int)
+   */
   public RequestBuilder load(File file) {
     if (file == null) {
       throw new IllegalArgumentException("File must not be null.");
@@ -132,7 +155,12 @@ public class Picasso {
     return new RequestBuilder(this, file.getPath(), Type.FILE);
   }
 
-  /** Start an image request using the specified drawable resource ID. */
+  /**
+   * Start an image request using the specified drawable resource ID.
+   *
+   * @see #load(String)
+   * @see #load(java.io.File)
+   */
   public RequestBuilder load(int resourceId) {
     if (resourceId == 0) {
       throw new IllegalArgumentException("Resource ID must not be zero.");
@@ -219,6 +247,14 @@ public class Picasso {
     }
   }
 
+  void error(Request request) {
+    targetsToRequests.remove(request.getTarget());
+    request.error();
+    if (listener != null && request.path != null) {
+      listener.onImageLoadFailed(this, request.path);
+    }
+  }
+
   Bitmap decodeStream(InputStream stream, PicassoBitmapOptions bitmapOptions) {
     if (stream == null) return null;
     synchronized (DECODE_LOCK) {
@@ -301,7 +337,7 @@ public class Picasso {
         result = decodeFile(request.path, options);
         request.loadedFrom = Request.LoadedFrom.DISK;
         break;
-      case STREAM:
+      case NETWORK:
         Response response = null;
         try {
           response = loader.load(request.path, request.retryCount == 0);
@@ -446,6 +482,11 @@ public class Picasso {
         throw new NullPointerException(builder.toString());
       }
 
+      if (newResult == result && result.isRecycled()) {
+        throw new IllegalStateException(
+            "Transformation " + transformation.key() + " returned input Bitmap but recycled it.");
+      }
+
       // If the transformation returned a new bitmap ensure they recycled the original.
       if (newResult != result && !result.isRecycled()) {
         throw new IllegalStateException("Transformation "
@@ -472,6 +513,7 @@ public class Picasso {
     private Loader loader;
     private ExecutorService service;
     private Cache memoryCache;
+    private Listener listener;
 
     /** Start building a new {@link Picasso} instance. */
     public Builder(Context context) {
@@ -517,6 +559,18 @@ public class Picasso {
       return this;
     }
 
+    /** Specify a listener for interesting events. */
+    public Builder listener(Listener listener) {
+      if (listener == null) {
+        throw new IllegalArgumentException("Listener must not be null.");
+      }
+      if (this.listener != null) {
+        throw new IllegalStateException("Listener already set.");
+      }
+      this.listener = listener;
+      return this;
+    }
+
     /** Create the {@link Picasso} instance. */
     public Picasso build() {
       Context context = this.context;
@@ -533,7 +587,7 @@ public class Picasso {
 
       Stats stats = new Stats(memoryCache);
 
-      return new Picasso(context, loader, service, memoryCache, stats);
+      return new Picasso(context, loader, service, memoryCache, listener, stats);
     }
   }
 }
