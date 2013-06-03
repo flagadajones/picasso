@@ -1,5 +1,18 @@
 package com.squareup.picasso;
 
+import static com.squareup.picasso.Utils.calculateInSampleSize;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Resources;
@@ -12,18 +25,9 @@ import android.os.Looper;
 import android.os.Message;
 import android.view.View;
 import android.widget.ImageView;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
-import static com.squareup.picasso.Loader.Response;
-import static com.squareup.picasso.Request.Type;
-import static com.squareup.picasso.Utils.calculateInSampleSize;
+import com.squareup.picasso.Loader.Response;
+import com.squareup.picasso.Request.Type;
 
 /**
  * Image downloading, transformation, and caching manager.
@@ -36,6 +40,8 @@ public class Picasso {
   private static final int REQUEST_COMPLETE = 1;
   private static final int REQUEST_RETRY = 2;
   private static final int REQUEST_DECODE_FAILED = 3;
+  private static final int TREAD_POOL_SIZE = 5;
+  
 
   private static final String FILE_SCHEME = "file:";
   private static final String CONTENT_SCHEME = "content:";
@@ -582,7 +588,8 @@ public class Picasso {
         memoryCache = new LruCache(context);
       }
       if (service == null) {
-        service = Executors.newFixedThreadPool(5, new Utils.PicassoThreadFactory());
+        service =   new ThreadPoolExecutor(TREAD_POOL_SIZE, TREAD_POOL_SIZE, 0L, TimeUnit.MILLISECONDS, new LifoBlockingDeque<Runnable>());
+       // service = Executors.newFixedThreadPool(5, new Utils.PicassoThreadFactory());
       }
 
       Stats stats = new Stats(memoryCache);
@@ -590,4 +597,35 @@ public class Picasso {
       return new Picasso(context, loader, service, memoryCache, listener, stats);
     }
   }
+ public static class LifoBlockingDeque <E extends Runnable> extends LinkedBlockingDeque<E> {
+
+      private static final long serialVersionUID = -4854985351588039351L;
+
+      @Override
+
+
+      public boolean offer(E e) { 
+          // override to put objects at the front of the list
+          return super.offerFirst(e);
+      }
+
+      @Override
+      public boolean offer(E e,long timeout, TimeUnit unit) throws InterruptedException { 
+          // override to put objects at the front of the list
+          return super.offerFirst(e,timeout, unit);
+      }
+
+
+      @Override
+      public boolean add(E e) { 
+          // override to put objects at the front of the list
+          return super.offerFirst(e);
+      }
+
+      @Override
+      public void put(E e) throws InterruptedException { 
+          // override to put objects at the front of the list
+          super.putFirst(e);
+          }
+      }
 }
