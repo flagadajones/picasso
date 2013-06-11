@@ -104,12 +104,12 @@ class Request implements Runnable {
         if(target instanceof ImageView)
             ( (ImageView)target).setImageResource(errorResId);
         else if     (target instanceof TextView)
-            ( (TextView)target).setCompoundDrawables(null,picasso.context.getResources().getDrawable(errorResId),null,null);
+            ( (TextView)target).setCompoundDrawablesWithIntrinsicBounds(null,picasso.context.getResources().getDrawable(errorResId),null,null);
     } else if (errorDrawable != null) {
         if(target instanceof ImageView)
             ( (ImageView)target).setImageDrawable(errorDrawable);
         else if     (target instanceof TextView)
-            ( (TextView)target).setCompoundDrawables(null,errorDrawable,null,null);
+            ( (TextView)target).setCompoundDrawablesWithIntrinsicBounds(null,errorDrawable,null,null);
     }
   }
 

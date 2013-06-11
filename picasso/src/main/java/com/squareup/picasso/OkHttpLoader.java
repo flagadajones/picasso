@@ -14,7 +14,7 @@ import static com.squareup.picasso.Utils.parseResponseSourceHeader;
 public class OkHttpLoader implements Loader {
   static final String RESPONSE_SOURCE = "X-Android-Response-Source";
   private static final String PICASSO_CACHE = "picasso-cache";
-  private static final int MAX_SIZE = 10 * 1024 * 1024; // 10MB
+  private static final int MAX_SIZE = 100 * 1024 * 1024; // 10MB
 
   private final OkHttpClient client;
 
